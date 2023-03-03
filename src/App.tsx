@@ -19,6 +19,7 @@ async function someAsyncAction(): Promise<void> {
 type ContextType = {
   counter1: number;
   counter2: number;
+  counter3: number;
   increment: () => Promise<void>;
 };
 
@@ -27,11 +28,13 @@ const CounterContext = createContext<ContextType>(null!);
 function CounterProvider({ children }: { children: ReactNode }): ReactElement {
   const [counter1, setCounter1] = useState(1);
   const [counter2, setCounter2] = useState(1);
+  const [counter3, setCounter3] = useState(1);
   const increment = useCallback(async () => {
     events.emit('beforeIncrement');
-    await someAsyncAction();
     setCounter1((x: number) => x + 1);
     setCounter2((x: number) => x + 1);
+    await someAsyncAction();
+    setCounter3((x: number) => x + 1);
     // React 17:
     //    Handlers of the following event will see counter1 updated value but not counter2.
     // React 18 with Automatic Batching:
@@ -41,18 +44,18 @@ function CounterProvider({ children }: { children: ReactNode }): ReactElement {
     events.emit('afterIncrement');
   }, []);
   return (
-    <CounterContext.Provider value={{ counter1, counter2, increment }}>
+    <CounterContext.Provider value={{ counter1, counter2, counter3, increment }}>
       {children}
     </CounterContext.Provider>
   );
 }
 
 function useBeforeAction(): string {
-  const { counter1, counter2 } = useContext(CounterContext);
+  const { counter1, counter2, counter3 } = useContext(CounterContext);
   const [result, setResult] = useState('');
   useEffect(() => {
     const handler = (): void => {
-      const message = `BEFORE - counter1: ${counter1}, counter2: ${counter2}`;
+      const message = `BEFORE - counter1: ${counter1}, counter2: ${counter2}, counter3: ${counter3}`;
       console.log(message);
       setResult(message);
     }
@@ -60,16 +63,16 @@ function useBeforeAction(): string {
     return () => {
       events.off('beforeIncrement', handler);
     };
-  }, [counter1, counter2]);
+  }, [counter1, counter2, counter3]);
   return result;
 }
 
 function useAfterAction(): string {
-  const { counter1, counter2 } = useContext(CounterContext);
+  const { counter1, counter2, counter3 } = useContext(CounterContext);
   const [result, setResult] = useState('');
   useEffect(() => {
     const handler = (): void => {
-      const message = `AFTER - counter1: ${counter1}, counter2: ${counter2}`;
+      const message = `AFTER - counter1: ${counter1}, counter2: ${counter2}, counter3: ${counter3}`;
       console.log(message);
       setResult(message);
     };
@@ -77,7 +80,7 @@ function useAfterAction(): string {
     return () => {
       events.off('afterIncrement', handler);
     };
-  }, [counter1, counter2]);
+  }, [counter1, counter2, counter3]);
   return result;
 }
 
@@ -95,12 +98,13 @@ function useMessages(): string[] {
 }
 
 function CounterComponent(): ReactElement {
-  const { counter1, counter2, increment } = useContext(CounterContext);
+  const { counter1, counter2, counter3, increment } = useContext(CounterContext);
   const messages = useMessages();
   return (
     <div>
       <p>{`counter1: ${counter1}`}</p>
       <p>{`counter2: ${counter2}`}</p>
+      <p>{`counter3: ${counter3}`}</p>
       <p>
         <button onClick={() => increment()}>INCREMENT</button>
       </p>
